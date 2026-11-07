@@ -1,0 +1,125 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #0f172a;
+  --foreground: #ffffff;
+}
+
+body {
+  background-color: var(--background);
+  color: #ffffff;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* Tipografía de títulos limpia, sólida y clara sin degradados luminosos */
+h1, h2, h3, h4 {
+  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  color: #ffffff;
+  letter-spacing: 0.02em;
+}
+
+h1 {
+  font-weight: 900 !important;
+}
+
+/* Hacer todos los textos secundarios mucho más claros, brillantes y legibles */
+.text-slate-400,
+.text-slate-500 {
+  color: #f1f5f9 !important;
+  font-weight: 600;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+.text-slate-300 {
+  color: #ffffff !important;
+  font-weight: 700;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+}
+
+/* Etiquetas de formularios y tablas más llamativas y claras */
+label,
+th {
+  color: #fdf4ff !important;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800 !important;
+  letter-spacing: 0.06em !important;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.55);
+}
+
+/* Números, códigos SKU y métricas más llamativos */
+.font-mono,
+code {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* Inputs y selects con letras grandes, claras y brillantes */
+input,
+select,
+textarea {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #cbd5e1 !important;
+  opacity: 0.9 !important;
+  font-weight: 500;
+}
+
+/* Scrollbar industrial estilizada */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #6366f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a855f7;
+}
+
+/* Estilos de Impresión para Tickets y Vales */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  header, aside, nav, button, .print\:hidden {
+    display: none !important;
+  }
+
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  #printable-ticket {
+    display: block !important;
+    width: 100% !important;
+    max-width: 480px !important;
+    margin: 0 auto !important;
+    padding: 10px !important;
+    color: #000000 !important;
+    background: #ffffff !important;
+    border: none !important;
+  }
+}
