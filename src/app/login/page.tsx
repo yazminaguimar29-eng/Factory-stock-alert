@@ -50,7 +50,7 @@ function LoginContent() {
         throw new Error(data.error || 'El correo o contraseña son incorrectos.');
       }
 
-      router.push('/dashboard');
+      router.push('/home');
       router.refresh();
     } catch (err: any) {
       setError(err.message);
