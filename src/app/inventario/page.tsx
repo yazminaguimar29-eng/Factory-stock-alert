@@ -218,18 +218,18 @@ export default function InventarioPage() {
 
   const drillAvailableZones = React.useMemo(() => {
     if (!drillCat) return [];
-    const zonesMap = new Map<string, { zone: string; count: number; totalStock: number; criticalCount: number }>();
+    const zonesMap: Record<string, { zone: string; count: number; totalStock: number; criticalCount: number }> = {};
 
     drillCategoryProducts.forEach((p) => {
       const z = extractZone(p.ubicacion_anaquel);
-      const existing = zonesMap.get(z) || { zone: z, count: 0, totalStock: 0, criticalCount: 0 };
+      const existing = zonesMap[z] || { zone: z, count: 0, totalStock: 0, criticalCount: 0 };
       existing.count += 1;
       existing.totalStock += p.stock_actual;
       if (p.stock_actual <= p.stock_min) existing.criticalCount += 1;
-      zonesMap.set(z, existing);
+      zonesMap[z] = existing;
     });
 
-    return Array.from(zonesMap.values()).sort((a, b) => a.zone.localeCompare(b.zone));
+    return Object.values(zonesMap).sort((a, b) => a.zone.localeCompare(b.zone));
   }, [drillCat, drillCategoryProducts]);
 
   const drillFinalProducts = React.useMemo(() => {
