@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#1e1b4b" />
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="50%" stop-color="#06b6d4" />
+      <stop offset="100%" stop-color="#2563eb" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+    <linearGradient id="roofGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a855f7" />
+      <stop offset="100%" stop-color="#7c3aed" />
+    </linearGradient>
+  </defs>
+
+  <!-- Base container rounded chamfer -->
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#bgGrad)" stroke="#38bdf8" stroke-width="2.5" />
+
+  <!-- Industrial Warehouse Silhouette -->
+  <path d="M12 48 L12 28 L24 20 L24 28 L36 20 L36 28 L48 20 L48 48 Z" fill="#1e293b" stroke="#64748b" stroke-width="1.5" />
+
+  <!-- Geometric Pallet & Stock Level Bars -->
+  <rect x="18" y="44" width="28" height="4" rx="1" fill="url(#goldGrad)" />
+  <rect x="22" y="48" width="4" height="3" fill="#d97706" />
+  <rect x="30" y="48" width="4" height="3" fill="#d97706" />
+  <rect x="38" y="48" width="4" height="3" fill="#d97706" />
+
+  <!-- Stock Stack Boxes -->
+  <rect x="20" y="34" width="11" height="9" rx="1" fill="url(#accentGrad)" stroke="#bae6fd" stroke-width="0.8" />
+  <rect x="33" y="34" width="11" height="9" rx="1" fill="url(#roofGrad)" stroke="#e9d5ff" stroke-width="0.8" />
+  <rect x="26.5" y="23" width="11" height="9" rx="1" fill="url(#goldGrad)" stroke="#fef08a" stroke-width="0.8" />
+
+  <!-- Signal / Pulse Beacon (Top Right) -->
+  <circle cx="50" cy="14" r="4" fill="#10b981" />
+  <circle cx="50" cy="14" r="7" fill="none" stroke="#34d399" stroke-width="1.5" opacity="0.6" />
+</svg>

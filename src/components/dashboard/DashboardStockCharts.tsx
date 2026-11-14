@@ -13,8 +13,10 @@ import {
   Layers,
   ArrowUpDown,
   TrendingUp,
+  History,
 } from 'lucide-react';
 import { Producto, CategoriaProducto } from '@/types';
+import { ProductKardexModal } from '@/components/inventory/ProductKardexModal';
 
 interface DashboardStockChartsProps {
   productos: Producto[];
@@ -26,6 +28,7 @@ export function DashboardStockCharts({ productos }: DashboardStockChartsProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'stock_desc' | 'stock_asc' | 'nombre'>('stock_desc');
   const [viewChartType, setViewChartType] = useState<'barras' | 'distribucion'>('barras');
+  const [selectedProdForKardex, setSelectedProdForKardex] = useState<Producto | null>(null);
 
   // Solo considerar productos activos
   const activeProducts = useMemo(() => {
@@ -370,8 +373,16 @@ export function DashboardStockCharts({ productos }: DashboardStockChartsProps) {
                           Ubicación: <strong className="text-white">{p.ubicacion_anaquel}</strong>
                         </span>
                         <span>
-                          Capacidad Máx: <strong className="text-white">{p.stock_max > 0 ? p.stock_max : 'N/A'}</strong>
+                          Capacidad: <strong className="text-white">{p.stock_max > 0 ? p.stock_max : 'N/A'}</strong>
                         </span>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedProdForKardex(p)}
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-cyan-300 hover:text-cyan-200 transition underline underline-offset-2 ml-2"
+                        >
+                          <History className="w-3 h-3 text-cyan-400" />
+                          <span>Kardex</span>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -480,6 +491,13 @@ export function DashboardStockCharts({ productos }: DashboardStockChartsProps) {
 
         </div>
       )}
+
+      {/* Modal de Kardex del Material */}
+      <ProductKardexModal
+        isOpen={Boolean(selectedProdForKardex)}
+        onClose={() => setSelectedProdForKardex(null)}
+        producto={selectedProdForKardex}
+      />
 
     </div>
   );

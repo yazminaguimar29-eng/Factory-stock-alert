@@ -16,6 +16,9 @@ import {
 import { Producto, UsuarioAutenticado } from '@/types';
 import { ProductDrillDownSelector } from '@/components/inventory/ProductDrillDownSelector';
 import { OperacionesNavTabs } from '@/components/movements/OperacionesNavTabs';
+import { BarcodeScannerModal } from '@/components/scanner/BarcodeScannerModal';
+import { useToast } from '@/components/ui/ToastContext';
+import { Scan, Barcode } from 'lucide-react';
 
 function EntradasContent() {
   const searchParams = useSearchParams();
@@ -24,6 +27,9 @@ function EntradasContent() {
   const [user, setUser] = useState<UsuarioAutenticado | null>(null);
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loadingProds, setLoadingProds] = useState(true);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+
+  const { showSuccess, showError } = useToast();
 
   // Form states
   const [selectedProductoId, setSelectedProductoId] = useState('');
@@ -101,12 +107,17 @@ function EntradasContent() {
       }
 
       if (selectedProd) {
+        const cantNum = Number(cantidad);
         setSuccessResult({
           producto: selectedProd,
-          cantidad: Number(cantidad),
+          cantidad: cantNum,
           nuevoStock: data.nuevoStock,
           factura: noFactura.trim().toUpperCase(),
         });
+        showSuccess(
+          `+${cantNum} ${selectedProd.unidad_medida} recepcionadas exitosamente (Nuevo Stock: ${data.nuevoStock})`,
+          'Entrada Registrada'
+        );
       }
 
       // Limpiar formulario
@@ -119,6 +130,7 @@ function EntradasContent() {
 
     } catch (err: any) {
       setError(err.message);
+      showError(err.message, 'Error en Entrada');
     } finally {
       setSubmitting(false);
     }
@@ -180,6 +192,18 @@ function EntradasContent() {
 
         {/* Formulario */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 md:p-8 shadow-xl">
+          {/* Botón Escáner Barcode / QR */}
+          <div className="mb-4 flex justify-end">
+            <button
+              type="button"
+              onClick={() => setIsScannerOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-cyan-500/25 transition transform hover:scale-[1.02]"
+            >
+              <Scan className="w-4 h-4 text-slate-950" />
+              <span>Escanear Código / QR</span>
+            </button>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-6">
             
             {/* 1. Selector de Producto con Navegación Drill-Down y Alta Rápida */}
@@ -296,6 +320,18 @@ function EntradasContent() {
 
           </form>
         </div>
+
+        {/* Modal de Escáner de Código de Barras y QR */}
+        <BarcodeScannerModal
+          isOpen={isScannerOpen}
+          onClose={() => setIsScannerOpen(false)}
+          productos={productos}
+          onProductScanned={(prod) => {
+            setSelectedProductoId(prod.id);
+            showSuccess(`Material seleccionado: ${prod.codigo_sku} - ${prod.nombre}`, 'Escaneo Exitoso');
+          }}
+          title="Escanear Material para Entrada"
+        />
 
       </div>
     </AppShell>

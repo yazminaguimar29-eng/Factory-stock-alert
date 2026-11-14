@@ -17,6 +17,9 @@ import {
   Wrench,
 } from 'lucide-react';
 import { Producto, UsuarioAutenticado, TicketSalida } from '@/types';
+import { BarcodeScannerModal } from '@/components/scanner/BarcodeScannerModal';
+import { useToast } from '@/components/ui/ToastContext';
+import { Scan } from 'lucide-react';
 
 const AREAS_PLANTA = [
   'Producción Línea 1',
@@ -30,6 +33,9 @@ export default function SalidasPage() {
   const [user, setUser] = useState<UsuarioAutenticado | null>(null);
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loadingProds, setLoadingProds] = useState(true);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+
+  const { showSuccess, showError } = useToast();
 
   // Form states
   const [selectedProductoId, setSelectedProductoId] = useState('');
@@ -120,6 +126,10 @@ export default function SalidasPage() {
       // Si se generó el ticket, mostrar modal de impresión inmediatamente
       if (data.ticket) {
         setGeneratedTicket(data.ticket);
+        showSuccess(
+          `Vale ${data.ticket.folio_vale} generado (-${cantidad} ${selectedProd?.unidad_medida || 'uds'})`,
+          'Salida por Vale Exitosa'
+        );
       }
 
       // Reset
@@ -129,6 +139,7 @@ export default function SalidasPage() {
 
     } catch (err: any) {
       setError(err.message);
+      showError(err.message, 'Error en Salida');
     } finally {
       setSubmitting(false);
     }
@@ -171,6 +182,18 @@ export default function SalidasPage() {
 
         {/* Formulario de Salida */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 md:p-8 shadow-xl">
+          {/* Botón Escáner Barcode / QR */}
+          <div className="mb-4 flex justify-end">
+            <button
+              type="button"
+              onClick={() => setIsScannerOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-cyan-500/25 transition transform hover:scale-[1.02]"
+            >
+              <Scan className="w-4 h-4 text-slate-950" />
+              <span>Escanear Código / QR</span>
+            </button>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-6">
             
             {/* 1. Selector de Producto en Drill-Down con Módulo de Alta */}
@@ -342,6 +365,18 @@ export default function SalidasPage() {
         <TicketModal
           ticket={generatedTicket}
           onClose={() => setGeneratedTicket(null)}
+        />
+
+        {/* Modal de Escáner de Código de Barras y QR */}
+        <BarcodeScannerModal
+          isOpen={isScannerOpen}
+          onClose={() => setIsScannerOpen(false)}
+          productos={productos}
+          onProductScanned={(prod) => {
+            setSelectedProductoId(prod.id);
+            showSuccess(`Material seleccionado para despacho: ${prod.codigo_sku} - ${prod.nombre}`, 'Escaneo Exitoso');
+          }}
+          title="Escanear Material para Salida"
         />
 
       </div>

@@ -3,6 +3,7 @@
 import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { FactoryLogo } from '@/components/ui/FactoryLogo';
 import {
   Factory,
   Lock,
@@ -15,6 +16,8 @@ import {
   UserPlus,
   KeyRound,
   RotateCw,
+  Building2,
+  ShieldCheck,
 } from 'lucide-react';
 
 function LoginContent() {
@@ -68,19 +71,12 @@ function LoginContent() {
       <div className="absolute inset-0 bg-gradient-to-t from-slate-950/45 via-transparent to-white/15 pointer-events-none" />
 
       <div className="w-full max-w-md relative z-10 space-y-6">
-        {/* Cabecera de la Marca Industrial */}
-        <div className="text-center space-y-2">
-          <div className="inline-flex p-3.5 bg-gradient-to-br from-cyan-400 to-blue-600 text-slate-950 rounded-2xl shadow-xl shadow-cyan-500/25 mb-1 transform hover:rotate-3 transition-transform">
-            <Factory className="w-9 h-9" />
-          </div>
-          <h1 className="text-3xl font-black tracking-tight text-white flex items-center justify-center gap-2">
-            <span>FACTORY</span>
-            <span className="text-cyan-400">STOCK</span>
-          </h1>
-          <p className="text-xs text-slate-300 font-medium max-w-sm mx-auto leading-relaxed drop-shadow-md">
-            Control de Inventario y Almacén en Tiempo Real
-          </p>
-        </div>
+        {/* Cabecera de la Marca Industrial Corporativa */}
+        <FactoryLogo
+          size="xl"
+          plantName="Planta de Manufactura — Almacén Central"
+          subtitleText="Sistema de Control de Inventario Industrial y Alertas en Tiempo Real"
+        />
 
         {/* Tarjeta de Autenticación */}
         <div className="bg-slate-900/85 border border-cyan-500/30 rounded-3xl p-7 sm:p-8 shadow-2xl backdrop-blur-xl shadow-cyan-950/50">

@@ -13,9 +13,10 @@
 # production
 /build
 
-# misc
-.DS_Store
-*.pem
+# system and sync artifacts
+desktop.ini
+.tmp.driveupload*
+Factory-stock-alert/
 
 # debug
 npm-debug.log*

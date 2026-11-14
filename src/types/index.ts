@@ -155,3 +155,29 @@ export interface DashboardMetricas {
   productosSobrestock: Producto[];
   ultimosMovimientos: MovimientoConDetalle[];
 }
+
+// ------------------------------------------
+// 7. BITÁCORA DE AUDITORÍA (Audit Log)
+// ------------------------------------------
+export type TipoAccionAuditoria = 
+  | 'INICIO_SESION'
+  | 'ENTRADA'
+  | 'SALIDA'
+  | 'DEVOLUCION'
+  | 'AJUSTE'
+  | 'ALTA_PRODUCTO'
+  | 'EDICION_PRODUCTO'
+  | 'ELIMINACION_PRODUCTO';
+
+export interface BitacoraAuditoria {
+  id: string;
+  fecha: string;
+  usuario_nombre: string;
+  usuario_email: string;
+  usuario_rol: RolUsuario;
+  tipo_accion: TipoAccionAuditoria;
+  detalles: string;
+  dispositivo?: string;
+  ip?: string;
+}
+

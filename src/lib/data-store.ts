@@ -13,7 +13,8 @@ import {
   Usuario, 
   Alerta, 
   DashboardMetricas,
-  TicketSalida 
+  TicketSalida,
+  BitacoraAuditoria 
 } from '@/types';
 import {
   isGoogleSheetsConfigured,
@@ -576,6 +577,42 @@ const INITIAL_ALERTAS: Alerta[] = [
   },
 ];
 
+const INITIAL_AUDIT_LOGS: BitacoraAuditoria[] = [
+  {
+    id: 'aud-1',
+    fecha: new Date(Date.now() - 3600000 * 5).toISOString(),
+    usuario_nombre: 'Ing. Carlos Mendoza (Gerente)',
+    usuario_email: 'admin@factorystock.com',
+    usuario_rol: 'ADMIN',
+    tipo_accion: 'INICIO_SESION',
+    detalles: 'Acceso seguro al panel de control desde navegador de estación',
+    dispositivo: 'Windows 11 / Chrome Desktop',
+    ip: '192.168.1.45',
+  },
+  {
+    id: 'aud-2',
+    fecha: new Date(Date.now() - 3600000 * 4).toISOString(),
+    usuario_nombre: 'Pedro Ramírez (Operador Almacén)',
+    usuario_email: 'almacen@factorystock.com',
+    usuario_rol: 'ALMACENISTA',
+    tipo_accion: 'ENTRADA',
+    detalles: 'Recepción de compra FAC-DAWN-8891 (+50 CA HARINA DAWN)',
+    dispositivo: 'Terminal Zebra Almacén 01',
+    ip: '192.168.1.112',
+  },
+  {
+    id: 'aud-3',
+    fecha: new Date(Date.now() - 3600000 * 2).toISOString(),
+    usuario_nombre: 'Pedro Ramírez (Operador Almacén)',
+    usuario_email: 'almacen@factorystock.com',
+    usuario_rol: 'ALMACENISTA',
+    tipo_accion: 'SALIDA',
+    detalles: 'Surtido vale VALE-1001 (-5 CA) a Producción Línea 1',
+    dispositivo: 'Terminal Zebra Almacén 01',
+    ip: '192.168.1.112',
+  },
+];
+
 const DB_FILE_PATH = path.join(process.cwd(), 'data', 'local-db.json');
 
 interface LocalDatabaseSchema {
@@ -583,6 +620,7 @@ interface LocalDatabaseSchema {
   movimientos: Movimiento[];
   usuarios: Usuario[];
   alertas: Alerta[];
+  audit_logs?: BitacoraAuditoria[];
 }
 
 // Almacén persistente local en disco (data/local-db.json) y memoria
@@ -592,6 +630,7 @@ class DataStore {
   private localMovimientos: Movimiento[] = [...INITIAL_MOVIMIENTOS];
   private localUsuarios: Usuario[] = [...INITIAL_USUARIOS];
   private localAlertas: Alerta[] = [...INITIAL_ALERTAS];
+  private localAuditLogs: BitacoraAuditoria[] = [...INITIAL_AUDIT_LOGS];
 
   private constructor() {
     this.loadFromDisk();
@@ -614,6 +653,9 @@ class DataStore {
         if (Array.isArray(data.alertas)) {
           this.localAlertas = data.alertas;
         }
+        if (Array.isArray(data.audit_logs) && data.audit_logs.length > 0) {
+          this.localAuditLogs = data.audit_logs;
+        }
       } else {
         this.saveToDisk();
       }
@@ -633,6 +675,7 @@ class DataStore {
         movimientos: this.localMovimientos,
         usuarios: this.localUsuarios,
         alertas: this.localAlertas,
+        audit_logs: this.localAuditLogs,
       };
       fs.writeFileSync(DB_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
     } catch (err) {
@@ -1146,6 +1189,31 @@ class DataStore {
       productosSobrestock,
       ultimosMovimientos,
     };
+  }
+
+  // ==========================================
+  // BITÁCORA DE AUDITORÍA (Audit Log)
+  // ==========================================
+
+  public async getAuditLogs(): Promise<BitacoraAuditoria[]> {
+    this.loadFromDisk();
+    return [...this.localAuditLogs].sort(
+      (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+    );
+  }
+
+  public async appendAuditLog(
+    entry: Omit<BitacoraAuditoria, 'id' | 'fecha'>
+  ): Promise<BitacoraAuditoria> {
+    const newEntry: BitacoraAuditoria = {
+      id: `aud-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+      fecha: new Date().toISOString(),
+      ...entry,
+    };
+
+    this.localAuditLogs.unshift(newEntry);
+    this.saveToDisk();
+    return newEntry;
   }
 }
 

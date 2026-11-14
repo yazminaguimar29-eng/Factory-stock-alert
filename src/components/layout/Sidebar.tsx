@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
+  Home,
   LayoutDashboard,
   Boxes,
   ArrowDownToLine,
@@ -16,6 +17,7 @@ import {
   Users,
   Factory,
   ArrowLeftRight,
+  ShieldCheck,
 } from 'lucide-react';
 import { RolUsuario } from '@/types';
 
@@ -45,6 +47,13 @@ export function Sidebar({ rol, isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
 
   const NAV_ITEMS: NavItem[] = [
+    {
+      name: 'Home',
+      href: '/home',
+      matchPaths: ['/home'],
+      icon: Home,
+      roles: ['ADMIN', 'ALMACENISTA', 'JEFE_AREA'],
+    },
     {
       name: 'Dashboard',
       href: '/dashboard',
@@ -126,6 +135,13 @@ export function Sidebar({ rol, isOpen, onClose }: SidebarProps) {
       href: '/usuarios',
       matchPaths: ['/usuarios'],
       icon: Users,
+      roles: ['ADMIN'],
+    },
+    {
+      name: 'Bitácora Auditoría',
+      href: '/auditoria',
+      matchPaths: ['/auditoria'],
+      icon: ShieldCheck,
       roles: ['ADMIN'],
     },
   ];

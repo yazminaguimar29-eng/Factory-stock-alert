@@ -137,7 +137,24 @@ export function getServiceAccountCredentials(): ServiceAccountCredentials | null
     }
   } catch {}
 
-  // 4. Fallback: Variables de entorno individuales
+  // 4. Fallback: Variable con el contenido completo del JSON (Ideal para Vercel)
+  if (process.env.GOOGLE_CREDENTIALS_JSON) {
+    try {
+      const parsed = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
+      if (parsed.client_email && parsed.private_key) {
+        return {
+          client_email: parsed.client_email,
+          private_key: parsed.private_key,
+          project_id: parsed.project_id,
+          source: 'env_vars',
+        };
+      }
+    } catch (err) {
+      console.error('[Google Sheets] Error al analizar GOOGLE_CREDENTIALS_JSON:', err);
+    }
+  }
+
+  // 5. Fallback: Variables de entorno individuales
   if (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_PRIVATE_KEY) {
     return {
       client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL.trim(),

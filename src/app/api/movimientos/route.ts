@@ -171,6 +171,31 @@ export async function POST(request: Request) {
       evidencia_foto: evidencia_foto || undefined,
     });
 
+    // Registrar evento en la Bitácora de Auditoría
+    try {
+      const userAgent = request.headers.get('user-agent') || 'Dispositivo desconocido';
+      const forwarded = request.headers.get('x-forwarded-for');
+      const ip = forwarded ? forwarded.split(',')[0].trim() : '127.0.0.1';
+      const prod = await dataStore.getProductoById(producto_id);
+
+      let tipoAccionAudit: any = 'ENTRADA';
+      if (tipo === 'SALIDA_VALE') tipoAccionAudit = 'SALIDA';
+      else if (tipo === 'DEVOLUCION') tipoAccionAudit = 'DEVOLUCION';
+      else if (tipo === 'AJUSTE') tipoAccionAudit = 'AJUSTE';
+
+      await dataStore.appendAuditLog({
+        usuario_nombre: session.nombre,
+        usuario_email: session.email,
+        usuario_rol: session.rol,
+        tipo_accion: tipoAccionAudit,
+        detalles: `Registro de ${tipo} (${folioVale}): ${cantidad} ${prod?.unidad_medida || 'uds'} de ${prod?.nombre || producto_id} (Nuevo Stock: ${resultado.nuevoStock})`,
+        dispositivo: userAgent.slice(0, 80),
+        ip,
+      });
+    } catch (e) {
+      console.warn('No se pudo guardar log de auditoría en movimiento:', e);
+    }
+
     return NextResponse.json({
       success: true,
       movimiento: resultado.movimiento,
