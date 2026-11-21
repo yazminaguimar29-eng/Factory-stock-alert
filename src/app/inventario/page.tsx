@@ -28,6 +28,9 @@ import {
   HardHat,
   Package as PackageIcon,
   Image as ImageIcon,
+  History,
+  Tag,
+  Scan,
 } from 'lucide-react';
 import { Producto, UsuarioAutenticado, CategoriaProducto } from '@/types';
 import { ImageModal } from '@/components/ui/ImageModal';
@@ -35,7 +38,6 @@ import { ProductLabelModal } from '@/components/inventory/ProductLabelModal';
 import { ProductKardexModal } from '@/components/inventory/ProductKardexModal';
 import { BarcodeScannerModal } from '@/components/scanner/BarcodeScannerModal';
 import { useToast } from '@/components/ui/ToastContext';
-import { History, Tag, Scan } from 'lucide-react';
 
 const DRILL_CATEGORIAS: {
   id: CategoriaProducto;
@@ -551,16 +553,6 @@ export default function InventarioPage() {
                             )}
                           </div>
                         </td>
-                                  isInactive
-                                    ? 'bg-emerald-950 hover:bg-emerald-900 text-emerald-400'
-                                    : 'bg-red-950 hover:bg-red-900 text-red-400'
-                                }`}
-                              >
-                                {isInactive ? <Power className="w-3.5 h-3.5" /> : <PowerOff className="w-3.5 h-3.5" />}
-                              </button>
-                            </div>
-                          </td>
-                        )}
                       </tr>
                     );
                   })
