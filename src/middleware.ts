@@ -42,11 +42,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Rutas de aplicación requieren token
+  // Modo Prueba / Demo Abierto: si no hay token, permitir el acceso directo sin pedir login
   if (!token) {
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('redirect', pathname);
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.next();
   }
 
   try {
@@ -69,9 +67,8 @@ export async function middleware(request: NextRequest) {
 
     return NextResponse.next();
   } catch (error) {
-    // Token expirado o inválido
-    const loginUrl = new URL('/login', request.url);
-    return NextResponse.redirect(loginUrl);
+    // Si el token expiró, permitir el paso en Modo Prueba
+    return NextResponse.next();
   }
 }
 

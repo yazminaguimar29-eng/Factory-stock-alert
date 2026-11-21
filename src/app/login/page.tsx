@@ -80,16 +80,28 @@ function LoginContent() {
 
         {/* Tarjeta de Autenticación */}
         <div className="bg-slate-900/85 border border-cyan-500/30 rounded-3xl p-7 sm:p-8 shadow-2xl backdrop-blur-xl shadow-cyan-950/50">
-          <div className="mb-6">
+          <div className="mb-5">
             <h2 className="text-base font-bold text-white tracking-wide flex items-center justify-between">
               <span>Iniciar Sesión</span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                WMS v2.0
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                MODO PRUEBA ACTIVO
               </span>
             </h2>
             <p className="text-xs text-slate-400 mt-1">
-              Ingresa tus credenciales institucionales para acceder al sistema
+              Puedes entrar directo sin contraseña o iniciar sesión con otra cuenta
             </p>
+          </div>
+
+          {/* Botón de Acceso Directo sin Contraseña */}
+          <div className="mb-6">
+            <Link
+              href="/dashboard"
+              className="w-full py-3.5 px-4 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-black rounded-2xl shadow-lg shadow-emerald-500/30 transition-all flex items-center justify-center gap-2 text-sm uppercase tracking-wider border border-white/30"
+            >
+              <ShieldCheck className="w-5 h-5" />
+              <span>Entrar Directo (Modo Prueba)</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
 
           {/* Notificación de registro exitoso previo */}

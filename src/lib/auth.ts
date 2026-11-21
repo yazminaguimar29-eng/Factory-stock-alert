@@ -78,14 +78,29 @@ export async function setSessionCookie(token: string) {
   });
 }
 
+export const DEFAULT_DEMO_USER: UsuarioAutenticado = {
+  id: 'usr-1',
+  nombre: 'Ing. Carlos Mendoza (Gerente)',
+  email: 'admin@factorystock.com',
+  rol: 'ADMIN',
+  area: 'Gerencia de Planta',
+};
+
 /**
- * Obtiene la sesión actual desde la cookie.
+ * Obtiene la sesión actual desde la cookie o devuelve el usuario de prueba (Modo Demo Abierto).
  */
-export async function getSession(): Promise<UsuarioAutenticado | null> {
-  const cookieStore = cookies();
-  const token = cookieStore.get(COOKIE_NAME)?.value;
-  if (!token) return null;
-  return verifyToken(token);
+export async function getSession(): Promise<UsuarioAutenticado> {
+  try {
+    const cookieStore = cookies();
+    const token = cookieStore.get(COOKIE_NAME)?.value;
+    if (token) {
+      const verified = await verifyToken(token);
+      if (verified) return verified;
+    }
+  } catch {
+    // En caso de no existir cookie, usar sesión de prueba automática
+  }
+  return DEFAULT_DEMO_USER;
 }
 
 /**
