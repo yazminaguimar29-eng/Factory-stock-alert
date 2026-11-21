@@ -334,17 +334,9 @@ export function ProductDrillDownSelector({
       {currentProduct ? (
         <div className="p-4 bg-gradient-to-r from-indigo-950/90 via-slate-900/90 to-violet-950/90 border border-teal-400/50 border-t-4 border-t-teal-400 rounded-tl-3xl rounded-br-3xl rounded-tr-md rounded-bl-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xl shadow-indigo-950/40 backdrop-blur-md">
           <div className="flex items-start gap-3.5">
-            {currentProduct.imagen_url ? (
-              <img
-                src={currentProduct.imagen_url}
-                alt={currentProduct.nombre}
-                className="w-12 h-12 rounded-tl-2xl rounded-br-2xl rounded-tr-xs rounded-bl-xs object-cover border-2 border-teal-400/60 flex-shrink-0 mt-0.5 shadow-md"
-              />
-            ) : (
-              <div className="w-11 h-11 rotate-3 rounded-tl-2xl rounded-br-2xl bg-teal-500/25 text-teal-300 border border-teal-400/50 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-md">
-                <PackageCheck className="w-5 h-5 -rotate-3" />
-              </div>
-            )}
+            <div className="w-11 h-11 rotate-3 rounded-tl-2xl rounded-br-2xl bg-teal-500/25 text-teal-300 border border-teal-400/50 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-md">
+              <PackageCheck className="w-5 h-5 -rotate-3" />
+            </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="px-3 py-0.5 bg-fuchsia-950/90 border border-fuchsia-400/60 rounded-tl-lg rounded-br-lg text-xs font-mono font-bold text-fuchsia-200">
@@ -1027,13 +1019,6 @@ export function ProductDrillDownSelector({
       >
         <div>
           <div className="flex items-start gap-3">
-            {p.imagen_url && (
-              <img
-                src={p.imagen_url}
-                alt={p.nombre}
-                className="w-12 h-12 rounded-tl-2xl rounded-br-2xl object-cover border border-violet-400/50 flex-shrink-0 shadow-sm mt-0.5"
-              />
-            )}
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2 mb-2">
                 <span className="font-mono text-xs font-black px-3 py-0.5 rounded-tl-lg rounded-br-lg bg-fuchsia-950/90 border border-fuchsia-400/60 text-fuchsia-200">
@@ -1059,17 +1044,23 @@ export function ProductDrillDownSelector({
             </div>
           </div>
 
-          <div className="mt-3 pt-2.5 border-t border-violet-500/25 grid grid-cols-2 gap-2 text-[11px]">
+          <div className="mt-3 pt-2.5 border-t border-violet-500/25 grid grid-cols-3 gap-2 text-[11px]">
             <div>
-              <span className="text-violet-300/70 block text-[10px]">Disponible:</span>
+              <span className="text-violet-300/70 block text-[10px] font-bold uppercase">Piezas:</span>
               <strong className={`font-mono text-xs font-bold ${isCritical ? 'text-rose-300' : 'text-teal-300'}`}>
                 {p.stock_actual} {p.unidad_medida}
               </strong>
             </div>
             <div>
-              <span className="text-violet-300/70 block text-[10px]">Anaquel / Ubicación:</span>
+              <span className="text-violet-300/70 block text-[10px] font-bold uppercase">Capacidad Máx:</span>
+              <strong className="text-amber-300 font-mono text-xs font-bold">
+                {p.stock_max} {p.unidad_medida}
+              </strong>
+            </div>
+            <div>
+              <span className="text-violet-300/70 block text-[10px] font-bold uppercase">Ubicación:</span>
               <strong className="text-white font-mono text-xs flex items-center gap-1">
-                <MapPin className="w-3 h-3 text-fuchsia-400" />
+                <MapPin className="w-3 h-3 text-cyan-400" />
                 {p.ubicacion_anaquel}
               </strong>
             </div>

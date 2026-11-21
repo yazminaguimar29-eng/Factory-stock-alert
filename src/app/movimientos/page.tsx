@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { TicketModal } from '@/components/movements/TicketModal';
-import { ImageModal } from '@/components/ui/ImageModal';
 import {
   History,
   Search,
@@ -14,23 +13,25 @@ import {
   Building2,
   FileText,
   UserCheck,
-  Camera,
+  Radio,
 } from 'lucide-react';
 import { MovimientoConDetalle, UsuarioAutenticado, TicketSalida } from '@/types';
+import { STOCK_SYNC_EVENT } from '@/lib/events';
 
 export default function MovimientosPage() {
   const [user, setUser] = useState<UsuarioAutenticado | null>(null);
   const [movimientos, setMovimientos] = useState<MovimientoConDetalle[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lastSync, setLastSync] = useState<string>('');
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Filtros
   const [search, setSearch] = useState('');
   const [selectedTipo, setSelectedTipo] = useState('TODOS');
   const [selectedArea, setSelectedArea] = useState('TODAS');
   
-  // Modal ticket e imagen
+  // Modal ticket
   const [ticketToPrint, setTicketToPrint] = useState<TicketSalida | null>(null);
-  const [selectedImage, setSelectedImage] = useState<{ url: string; title: string } | null>(null);
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -38,32 +39,70 @@ export default function MovimientosPage() {
       .then((data) => {
         if (data.authenticated) setUser(data.user);
       });
-
-    loadMovimientos();
   }, []);
 
-  const loadMovimientos = async () => {
-    setLoading(true);
+  const loadMovimientos = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    setIsSyncing(true);
     try {
       const res = await fetch('/api/movimientos');
       const data = await res.json();
       if (data.movimientos) {
         setMovimientos(data.movimientos);
+        const now = new Date();
+        setLastSync(now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
       }
     } catch (err) {
       console.error('Error cargando movimientos:', err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
+      setIsSyncing(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadMovimientos(false);
+
+    const handleSync = () => {
+      loadMovimientos(true);
+    };
+
+    window.addEventListener(STOCK_SYNC_EVENT, handleSync);
+    window.addEventListener('focus', handleSync);
+
+    const interval = setInterval(() => {
+      loadMovimientos(true);
+    }, 6000);
+
+    let channel: BroadcastChannel | null = null;
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        channel = new BroadcastChannel('factory_stock_bus');
+        channel.onmessage = (event) => {
+          if (event.data?.type === 'STOCK_UPDATED') {
+            loadMovimientos(true);
+          }
+        };
+      }
+    } catch {
+      // fallback
+    }
+
+    return () => {
+      window.removeEventListener(STOCK_SYNC_EVENT, handleSync);
+      window.removeEventListener('focus', handleSync);
+      clearInterval(interval);
+      if (channel) channel.close();
+    };
+  }, [loadMovimientos]);
 
   const handlePrintTicket = (m: MovimientoConDetalle) => {
-    const fechaObj = new Date(m.fecha);
-    setTicketToPrint({
-      folio_vale: m.no_factura_o_vale,
-      fecha: fechaObj.toLocaleDateString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit' }),
-      hora: fechaObj.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-      producto_nombre: m.producto_nombre || 'Material Industrial',
+    const d = new Date(m.fecha);
+    const ticket: TicketSalida = {
+      folio_vale: m.no_factura_o_vale || 'VALE-DESPACHO',
+      fecha: d.toLocaleDateString('es-MX'),
+      hora: d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+      producto_nombre: m.producto_nombre || 'Material de Almacén',
       producto_sku: m.producto_sku || 'N/A',
       cantidad: m.cantidad,
       unidad_medida: m.producto_unidad || 'pza',
@@ -72,17 +111,25 @@ export default function MovimientosPage() {
       motivo_orden_trabajo: m.motivo_orden_trabajo,
       usuario_almacenista: m.usuario_almacenista,
       ubicacion_anaquel: m.ubicacion_anaquel || 'N/A',
-    });
+    };
+    setTicketToPrint(ticket);
   };
 
+  // Filtrado
   const filteredMovimientos = movimientos.filter((m) => {
+    const sku = m.producto_sku || '';
+    const nombre = m.producto_nombre || '';
+    const folio = m.no_factura_o_vale || '';
+    const resp = m.responsable_recibe || '';
+    const mot = m.motivo_orden_trabajo || '';
+    const q = search.toLowerCase();
+
     const matchesSearch =
-      (m.producto_sku || '').toLowerCase().includes(search.toLowerCase()) ||
-      (m.producto_nombre || '').toLowerCase().includes(search.toLowerCase()) ||
-      (m.no_factura_o_vale || '').toLowerCase().includes(search.toLowerCase()) ||
-      (m.responsable_recibe || '').toLowerCase().includes(search.toLowerCase()) ||
-      (m.motivo_orden_trabajo || '').toLowerCase().includes(search.toLowerCase()) ||
-      (m.usuario_almacenista || '').toLowerCase().includes(search.toLowerCase());
+      sku.toLowerCase().includes(q) ||
+      nombre.toLowerCase().includes(q) ||
+      folio.toLowerCase().includes(q) ||
+      resp.toLowerCase().includes(q) ||
+      mot.toLowerCase().includes(q);
 
     const matchesTipo = selectedTipo === 'TODOS' || m.tipo === selectedTipo;
     const matchesArea = selectedArea === 'TODAS' || m.area_solicitante === selectedArea;
@@ -105,52 +152,58 @@ export default function MovimientosPage() {
         {/* Cabecera */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-white uppercase flex items-center gap-2">
-              <History className="w-7 h-7 text-amber-400" />
-              <span>Historial Inmutable de Movimientos</span>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-mono font-black bg-emerald-950 text-emerald-300 border border-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.3)]">
+                <Radio className={`w-3.5 h-3.5 text-emerald-400 ${isSyncing ? 'animate-spin' : 'animate-pulse'}`} />
+                <span>Auto-sincronizado {lastSync && `• ${lastSync}`}</span>
+              </span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white uppercase flex items-center gap-2">
+              <History className="w-7 h-7 text-cyan-400" />
+              <span>Historial de Movimientos de Almacén</span>
             </h1>
-            <p className="text-xs text-slate-400 mt-1">
-              Trazabilidad integral de entradas, salidas por vale, devoluciones y ajustes de almacén
+            <p className="text-xs text-slate-300 mt-1">
+              Registro cronológico inmutable de entradas, salidas por vales y devoluciones con sincronización en tiempo real
             </p>
           </div>
 
           <button
-            onClick={loadMovimientos}
-            title="Refrescar movimientos"
-            className="p-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl border border-slate-800 transition-colors self-start sm:self-auto"
+            onClick={() => loadMovimientos(false)}
+            title="Refrescar historial"
+            className="p-2.5 bg-indigo-950/90 hover:bg-violet-900 text-violet-200 hover:text-cyan-300 rounded-xl border border-violet-500/50 transition-colors shadow-sm self-start sm:self-auto"
           >
-            <RotateCw className={`w-4 h-4 ${loading ? 'animate-spin text-amber-400' : ''}`} />
+            <RotateCw className={`w-4 h-4 ${loading || isSyncing ? 'animate-spin text-cyan-400' : ''}`} />
           </button>
         </div>
 
-        {/* Barra de Filtros */}
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-md space-y-3">
+        {/* Filtros */}
+        <div className="bg-indigo-950/90 backdrop-blur-md border-2 border-cyan-500/40 border-t-4 border-t-cyan-400 p-4 rounded-3xl shadow-xl space-y-3">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {/* Buscador */}
             <div className="relative">
-              <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+              <Search className="w-4 h-4 text-cyan-400 absolute left-3.5 top-3" />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar por SKU, folio, OT, responsable..."
-                className="w-full pl-10 pr-4 py-2 bg-slate-950/80 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
+                placeholder="Buscar por SKU, material, folio, OT..."
+                className="w-full pl-10 pr-4 py-2 bg-slate-950/90 border border-violet-500/50 rounded-xl text-xs text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400 font-semibold"
               />
             </div>
 
             {/* Tipo de Movimiento */}
             <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-slate-400 flex-shrink-0" />
+              <Filter className="w-4 h-4 text-cyan-400 flex-shrink-0" />
               <select
                 value={selectedTipo}
                 onChange={(e) => setSelectedTipo(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-950/80 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-amber-400"
+                className="w-full px-3 py-2 bg-slate-950/90 border border-violet-500/50 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-400 font-semibold"
               >
                 <option value="TODOS">Todos los Tipos de Movimiento</option>
-                <option value="ENTRADA_COMPRA">ENTRADA_COMPRA (Facturas)</option>
-                <option value="SALIDA_VALE">SALIDA_VALE (Despachos)</option>
-                <option value="DEVOLUCION">DEVOLUCION (Reingresos)</option>
-                <option value="AJUSTE">AJUSTE (Auditorías)</option>
+                <option value="ENTRADA_COMPRA">Entradas por Compra (+)</option>
+                <option value="SALIDA_VALE">Salidas por Vales (-)</option>
+                <option value="DEVOLUCION">Devoluciones (+)</option>
+                <option value="AJUSTE_INVENTARIO">Ajustes de Auditoría</option>
               </select>
             </div>
 
@@ -159,7 +212,7 @@ export default function MovimientosPage() {
               <select
                 value={selectedArea}
                 onChange={(e) => setSelectedArea(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-950/80 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-amber-400"
+                className="w-full px-3 py-2 bg-slate-950/90 border border-violet-500/50 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-400 font-semibold"
               >
                 <option value="TODAS">Todas las Áreas</option>
                 <option value="Producción Línea 1">Producción Línea 1</option>
@@ -174,44 +227,43 @@ export default function MovimientosPage() {
         </div>
 
         {/* TABLA DE MOVIMIENTOS */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
+        <div className="bg-slate-900 border-2 border-violet-500/40 rounded-2xl overflow-hidden shadow-2xl">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-950/80 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
+              <thead className="bg-slate-950 text-slate-300 uppercase tracking-wider font-black border-b border-violet-500/40">
                 <tr>
-                  <th className="px-4 py-3">Tipo</th>
-                  <th className="px-4 py-3">Material / SKU</th>
-                  <th className="px-4 py-3">Cantidad</th>
-                  <th className="px-4 py-3">Folio / Factura</th>
-                  <th className="px-4 py-3 text-center">Evidencia</th>
-                  <th className="px-4 py-3">Área y Responsable</th>
-                  <th className="px-4 py-3">Motivo / Orden de Trabajo (OT)</th>
-                  <th className="px-4 py-3">Almacenista</th>
-                  <th className="px-4 py-3">Fecha y Hora</th>
-                  <th className="px-4 py-3 text-right">Comprobante</th>
+                  <th className="px-4 py-3.5">Tipo</th>
+                  <th className="px-4 py-3.5">Material / SKU</th>
+                  <th className="px-4 py-3.5">Cantidad</th>
+                  <th className="px-4 py-3.5">Folio / Factura</th>
+                  <th className="px-4 py-3.5">Área y Responsable</th>
+                  <th className="px-4 py-3.5">Motivo / OT</th>
+                  <th className="px-4 py-3.5">Almacenista</th>
+                  <th className="px-4 py-3.5">Fecha y Hora</th>
+                  <th className="px-4 py-3.5 text-right">Comprobante</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
                 {filteredMovimientos.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="p-8 text-center text-slate-500 text-xs">
+                    <td colSpan={9} className="p-8 text-center text-slate-400 text-xs font-semibold">
                       No se encontraron registros de movimiento con los criterios especificados.
                     </td>
                   </tr>
                 ) : (
                   filteredMovimientos.map((m) => (
-                    <tr key={m.id} className="hover:bg-slate-850 transition-colors">
+                    <tr key={m.id} className="hover:bg-slate-800/80 transition-colors">
                       {/* Tipo */}
                       <td className="px-4 py-3">
                         <span
-                          className={`inline-block px-2.5 py-1 rounded text-[10px] font-mono font-bold ${
+                          className={`inline-block px-2.5 py-1 rounded text-[10px] font-mono font-black ${
                             m.tipo === 'ENTRADA_COMPRA'
-                              ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
+                              ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/60'
                               : m.tipo === 'SALIDA_VALE'
-                              ? 'bg-amber-950 text-amber-400 border border-amber-800'
+                              ? 'bg-amber-950 text-amber-300 border border-amber-500/60'
                               : m.tipo === 'DEVOLUCION'
-                              ? 'bg-blue-950 text-blue-400 border border-blue-800'
-                              : 'bg-purple-950 text-purple-400 border border-purple-800'
+                              ? 'bg-cyan-950 text-cyan-300 border border-cyan-500/60'
+                              : 'bg-purple-950 text-purple-300 border border-purple-500/60'
                           }`}
                         >
                           {m.tipo}
@@ -220,54 +272,29 @@ export default function MovimientosPage() {
 
                       {/* Material / SKU */}
                       <td className="px-4 py-3">
-                        <span className="font-mono font-bold text-amber-400 block text-xs">
+                        <span className="font-mono font-black text-amber-300 block text-xs">
                           {m.producto_sku}
                         </span>
-                        <span className="text-white font-semibold block">{m.producto_nombre}</span>
-                        <span className="text-[10px] text-slate-400">Rack: {m.ubicacion_anaquel}</span>
+                        <span className="text-white font-bold block">{m.producto_nombre}</span>
+                        <span className="text-[10px] text-slate-400 font-mono">Rack: {m.ubicacion_anaquel}</span>
                       </td>
 
                       {/* Cantidad */}
-                      <td className="px-4 py-3 font-mono font-bold text-white text-sm">
+                      <td className="px-4 py-3 font-mono font-black text-white text-sm">
                         {m.cantidad}{' '}
-                        <span className="text-xs font-sans text-slate-400 font-normal">
+                        <span className="text-xs font-sans text-slate-300 font-bold">
                           {m.producto_unidad}
                         </span>
                       </td>
 
                       {/* Folio / Factura */}
-                      <td className="px-4 py-3 font-mono text-slate-300 font-semibold">
+                      <td className="px-4 py-3 font-mono text-cyan-300 font-bold">
                         {m.no_factura_o_vale}
-                      </td>
-
-                      {/* Evidencia Fotográfica */}
-                      <td className="px-4 py-3 text-center">
-                        {m.evidencia_foto ? (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setSelectedImage({
-                                url: m.evidencia_foto!,
-                                title: `Evidencia ${m.tipo} - ${m.producto_sku} (${m.no_factura_o_vale})`,
-                              })
-                            }
-                            className="inline-flex items-center justify-center p-1 rounded-lg border border-slate-700 bg-slate-950/80 hover:border-cyan-400 hover:scale-105 transition-all shadow-sm group"
-                            title="Ver foto de comprobante / evidencia"
-                          >
-                            <img
-                              src={m.evidencia_foto}
-                              alt="Foto Evidencia"
-                              className="w-9 h-9 object-cover rounded"
-                            />
-                          </button>
-                        ) : (
-                          <span className="text-slate-600 text-xs font-mono">-</span>
-                        )}
                       </td>
 
                       {/* Área y Responsable */}
                       <td className="px-4 py-3">
-                        <span className="text-slate-200 font-semibold block">{m.area_solicitante}</span>
+                        <span className="text-slate-200 font-bold block">{m.area_solicitante}</span>
                         <span className="text-slate-400 text-[11px] block">{m.responsable_recibe}</span>
                       </td>
 
@@ -279,12 +306,12 @@ export default function MovimientosPage() {
                       </td>
 
                       {/* Almacenista */}
-                      <td className="px-4 py-3 text-slate-400 text-xs">
+                      <td className="px-4 py-3 text-slate-400 text-xs font-medium">
                         {m.usuario_almacenista}
                       </td>
 
                       {/* Fecha y Hora */}
-                      <td className="px-4 py-3 text-slate-400 text-[11px] whitespace-nowrap">
+                      <td className="px-4 py-3 text-slate-400 text-[11px] whitespace-nowrap font-mono">
                         {new Date(m.fecha).toLocaleString('es-MX', {
                           year: 'numeric',
                           month: 'short',
@@ -300,7 +327,7 @@ export default function MovimientosPage() {
                           <button
                             onClick={() => handlePrintTicket(m)}
                             title="Reimprimir Comprobante Oficial"
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-800 hover:bg-amber-400 hover:text-slate-950 text-slate-300 rounded-lg text-xs font-semibold transition-colors"
+                            className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg text-xs font-black transition-colors shadow-sm"
                           >
                             <Printer className="w-3.5 h-3.5" />
                             <span>Ticket</span>
@@ -319,14 +346,6 @@ export default function MovimientosPage() {
         <TicketModal
           ticket={ticketToPrint}
           onClose={() => setTicketToPrint(null)}
-        />
-
-        {/* Modal de Previsualización de Evidencia */}
-        <ImageModal
-          isOpen={!!selectedImage}
-          onClose={() => setSelectedImage(null)}
-          imageUrl={selectedImage?.url || ''}
-          title={selectedImage?.title || ''}
         />
 
       </div>

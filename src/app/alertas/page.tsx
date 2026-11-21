@@ -20,6 +20,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { AlertaConDetalle, UsuarioAutenticado } from '@/types';
+import { STOCK_SYNC_EVENT } from '@/lib/events';
 
 const SECURITY_PINS = ['1234', 'admin123', 'almacen123'];
 
@@ -43,11 +44,28 @@ export default function AlertasPage() {
         if (data.authenticated) setUser(data.user);
       });
 
-    loadAlertas();
+    loadAlertas(false);
+
+    const handleSync = () => {
+      loadAlertas(true);
+    };
+
+    window.addEventListener(STOCK_SYNC_EVENT, handleSync);
+    window.addEventListener('focus', handleSync);
+
+    const interval = setInterval(() => {
+      loadAlertas(true);
+    }, 6000);
+
+    return () => {
+      window.removeEventListener(STOCK_SYNC_EVENT, handleSync);
+      window.removeEventListener('focus', handleSync);
+      clearInterval(interval);
+    };
   }, []);
 
-  const loadAlertas = async () => {
-    setLoading(true);
+  const loadAlertas = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const res = await fetch('/api/alertas');
       const data = await res.json();
@@ -57,7 +75,7 @@ export default function AlertasPage() {
     } catch (err) {
       console.error('Error cargando alertas:', err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -171,7 +189,7 @@ export default function AlertasPage() {
             </button>
 
             <button
-              onClick={loadAlertas}
+              onClick={() => loadAlertas(false)}
               title="Refrescar alertas"
               className="p-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-tl-xl rounded-br-xl border border-slate-700 transition-colors"
             >

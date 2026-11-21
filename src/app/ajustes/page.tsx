@@ -14,6 +14,7 @@ import {
 import { Producto, UsuarioAutenticado } from '@/types';
 import { ProductDrillDownSelector } from '@/components/inventory/ProductDrillDownSelector';
 import { InventarioNavTabs } from '@/components/inventory/InventarioNavTabs';
+import { notifyStockUpdated } from '@/lib/events';
 
 export default function AjustesPage() {
   const [user, setUser] = useState<UsuarioAutenticado | null>(null);
@@ -107,6 +108,8 @@ export default function AjustesPage() {
         nuevoStock,
         diferencia,
       });
+
+      notifyStockUpdated();
 
       setNuevoStockReal('');
       setMotivoAjuste('');

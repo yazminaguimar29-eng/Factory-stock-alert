@@ -365,20 +365,23 @@ export function DashboardStockCharts({ productos }: DashboardStockChartsProps) {
                       </div>
 
                       {/* Referencias Mínimo / Máximo / Anaquel */}
-                      <div className="flex items-center justify-between text-[11px] text-violet-200 font-mono">
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-violet-200 font-mono mt-1">
                         <span>
-                          Mínimo: <strong className="text-white">{p.stock_min}</strong>
+                          Piezas: <strong className="text-white font-bold">{p.stock_actual} {p.unidad_medida}</strong>
                         </span>
                         <span>
-                          Ubicación: <strong className="text-white">{p.ubicacion_anaquel}</strong>
+                          Máx: <strong className="text-amber-300 font-bold">{p.stock_max > 0 ? `${p.stock_max} ${p.unidad_medida}` : 'N/A'}</strong>
                         </span>
                         <span>
-                          Capacidad: <strong className="text-white">{p.stock_max > 0 ? p.stock_max : 'N/A'}</strong>
+                          Mín: <strong className="text-rose-400 font-bold">{p.stock_min} {p.unidad_medida}</strong>
+                        </span>
+                        <span>
+                          Rack: <strong className="text-cyan-300 font-bold">{p.ubicacion_anaquel}</strong>
                         </span>
                         <button
                           type="button"
                           onClick={() => setSelectedProdForKardex(p)}
-                          className="inline-flex items-center gap-1 text-[11px] font-bold text-cyan-300 hover:text-cyan-200 transition underline underline-offset-2 ml-2"
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-cyan-300 hover:text-cyan-200 transition underline underline-offset-2 ml-auto"
                         >
                           <History className="w-3 h-3 text-cyan-400" />
                           <span>Kardex</span>

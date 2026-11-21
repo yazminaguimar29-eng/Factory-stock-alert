@@ -8,17 +8,14 @@ import {
   FileCheck,
   CheckCircle,
   AlertCircle,
-  Package,
-  Layers,
   MapPin,
   RotateCw,
 } from 'lucide-react';
 import { Producto, UsuarioAutenticado } from '@/types';
 import { ProductDrillDownSelector } from '@/components/inventory/ProductDrillDownSelector';
 import { OperacionesNavTabs } from '@/components/movements/OperacionesNavTabs';
-import { BarcodeScannerModal } from '@/components/scanner/BarcodeScannerModal';
 import { useToast } from '@/components/ui/ToastContext';
-import { Scan, Barcode } from 'lucide-react';
+import { notifyStockUpdated } from '@/lib/events';
 
 function EntradasContent() {
   const searchParams = useSearchParams();
@@ -27,7 +24,6 @@ function EntradasContent() {
   const [user, setUser] = useState<UsuarioAutenticado | null>(null);
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loadingProds, setLoadingProds] = useState(true);
-  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   const { showSuccess, showError } = useToast();
 
@@ -120,11 +116,14 @@ function EntradasContent() {
         );
       }
 
+      // Notificar a toda la aplicación (Dashboard, Home, Inventario) en tiempo real sin recargar página
+      notifyStockUpdated();
+
       // Limpiar formulario
       setCantidad('');
       setNoFactura('');
 
-      // Refrescar lista de productos
+      // Refrescar lista de productos local
       const updatedProds = await fetch('/api/productos?activos=true').then((r) => r.json());
       if (updatedProds.productos) setProductos(updatedProds.productos);
 
@@ -151,22 +150,22 @@ function EntradasContent() {
         <OperacionesNavTabs userRole={user.rol} />
 
         {/* Cabecera */}
-        <div>
+        <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-950 border-2 border-emerald-500/50 border-t-4 border-t-emerald-400 p-5 rounded-3xl shadow-xl shadow-emerald-950/30">
           <h1 className="text-2xl font-black tracking-tight text-white uppercase flex items-center gap-2">
             <ArrowDownToLine className="w-7 h-7 text-emerald-400" />
             <span>Recepción de Material por Compra</span>
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Registro oficial de entradas de insumos y refacciones con número de factura de proveedor
+          <p className="text-xs text-emerald-200 mt-1 font-medium">
+            Registro oficial de entradas de insumos y refacciones con número de factura de proveedor y sincronización en tiempo real
           </p>
         </div>
 
         {/* Notificación de Éxito */}
         {successResult && (
-          <div className="p-5 bg-emerald-950/80 border border-emerald-700 rounded-xl shadow-lg flex items-start gap-4">
+          <div className="p-5 bg-emerald-950/90 border-2 border-emerald-500 rounded-2xl shadow-xl shadow-emerald-950/40 flex items-start gap-4">
             <CheckCircle className="w-6 h-6 text-emerald-400 flex-shrink-0 mt-0.5" />
             <div className="space-y-1">
-              <h3 className="text-sm font-bold text-white">
+              <h3 className="text-sm font-black text-white">
                 ¡Entrada Registrada Exitosamente!
               </h3>
               <p className="text-xs text-emerald-300">
@@ -174,7 +173,7 @@ function EntradasContent() {
                 <strong>{successResult.producto.nombre}</strong> (SKU: {successResult.producto.codigo_sku}).
               </p>
               <div className="flex flex-wrap gap-4 text-xs font-mono pt-1 text-emerald-200">
-                <span>Nuevo Stock: <strong className="text-white text-sm">{successResult.nuevoStock}</strong></span>
+                <span>Nuevo Stock: <strong className="text-white text-sm">{successResult.nuevoStock} piezas</strong></span>
                 <span>Factura: <strong>{successResult.factura}</strong></span>
                 <span>Ubicación: <strong>{successResult.producto.ubicacion_anaquel}</strong></span>
               </div>
@@ -184,29 +183,17 @@ function EntradasContent() {
 
         {/* Error */}
         {error && (
-          <div className="p-4 bg-red-950/80 border border-red-800 rounded-xl flex items-center gap-3 text-red-300 text-xs font-semibold">
+          <div className="p-4 bg-red-950/90 border-2 border-red-500 rounded-2xl flex items-center gap-3 text-red-200 text-xs font-bold">
             <AlertCircle className="w-5 h-5 flex-shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {/* Formulario */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 md:p-8 shadow-xl">
-          {/* Botón Escáner Barcode / QR */}
-          <div className="mb-4 flex justify-end">
-            <button
-              type="button"
-              onClick={() => setIsScannerOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-cyan-500/25 transition transform hover:scale-[1.02]"
-            >
-              <Scan className="w-4 h-4 text-slate-950" />
-              <span>Escanear Código / QR</span>
-            </button>
-          </div>
-
+        <div className="bg-slate-900 border-2 border-emerald-500/40 rounded-3xl p-6 md:p-8 shadow-2xl">
           <form onSubmit={handleSubmit} className="space-y-6">
             
-            {/* 1. Selector de Producto con Navegación Drill-Down y Alta Rápida */}
+            {/* 1. Selector de Producto con Navegación Drill-Down */}
             <ProductDrillDownSelector
               productos={productos}
               selectedProductoId={selectedProductoId}
@@ -221,29 +208,31 @@ function EntradasContent() {
               label="Seleccionar Material / SKU a Recibir"
             />
 
-            {/* Vista previa de ficha técnica del producto seleccionado */}
+            {/* Ficha técnica del producto con piezas actuales y máxima capacidad */}
             {selectedProd && (
-              <div className="p-4 bg-slate-950/60 border border-slate-800 rounded-xl grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+              <div className="p-4 bg-slate-950/80 border-2 border-emerald-500/30 rounded-2xl grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
                 <div>
-                  <span className="text-slate-500 block">Categoría:</span>
-                  <strong className="text-slate-300 font-semibold">{selectedProd.categoria}</strong>
-                </div>
-                <div>
-                  <span className="text-slate-500 block">Stock Actual:</span>
-                  <strong className="text-amber-400 font-mono text-sm font-bold">
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Piezas en Stock:</span>
+                  <strong className="text-emerald-400 font-mono text-base font-black">
                     {selectedProd.stock_actual} {selectedProd.unidad_medida}
                   </strong>
                 </div>
                 <div>
-                  <span className="text-slate-500 block">Ubicación Física:</span>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Capacidad Máxima:</span>
+                  <strong className="text-amber-300 font-mono text-sm font-black">
+                    {selectedProd.stock_max} {selectedProd.unidad_medida}
+                  </strong>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Ubicación Física:</span>
                   <strong className="text-white font-mono flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-amber-400" />
+                    <MapPin className="w-3.5 h-3.5 text-cyan-400" />
                     {selectedProd.ubicacion_anaquel}
                   </strong>
                 </div>
                 <div>
-                  <span className="text-slate-500 block">Proveedor Registrado:</span>
-                  <strong className="text-slate-300 truncate block">
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Proveedor:</span>
+                  <strong className="text-slate-200 truncate block">
                     {selectedProd.proveedor_principal || 'N/A'}
                   </strong>
                 </div>
@@ -253,8 +242,8 @@ function EntradasContent() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {/* 2. Cantidad */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
-                  Cantidad a Ingresar <span className="text-amber-400">*</span>
+                <label className="block text-xs font-black uppercase tracking-wider text-slate-200 mb-2">
+                  Cantidad a Ingresar (Piezas / Unidades) <span className="text-emerald-400">*</span>
                 </label>
                 <div className="relative">
                   <input
@@ -264,46 +253,46 @@ function EntradasContent() {
                     value={cantidad}
                     onChange={(e) => setCantidad(e.target.value)}
                     placeholder="Ej. 50"
-                    className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-base font-bold text-white focus:outline-none focus:border-amber-400"
+                    className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-base font-black text-white focus:outline-none focus:border-emerald-400 font-mono"
                   />
                   {selectedProd && (
-                    <span className="absolute right-4 top-3.5 text-xs font-semibold text-slate-400">
+                    <span className="absolute right-4 top-3.5 text-xs font-bold text-slate-400">
                       {selectedProd.unidad_medida}
                     </span>
                   )}
                 </div>
                 {selectedProd && cantidad && Number(cantidad) > 0 && (
-                  <p className="text-[11px] text-emerald-400 font-mono mt-1.5">
+                  <p className="text-[11px] text-emerald-400 font-mono font-bold mt-1.5">
                     &rarr; El stock aumentará de {selectedProd.stock_actual} a{' '}
-                    <strong>{selectedProd.stock_actual + Number(cantidad)} {selectedProd.unidad_medida}</strong>
+                    <strong>{selectedProd.stock_actual + Number(cantidad)} {selectedProd.unidad_medida}</strong> (Máx ref: {selectedProd.stock_max})
                   </p>
                 )}
               </div>
 
               {/* 3. Número de Factura */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
-                  Número de Factura / Remisión <span className="text-amber-400">*</span>
+                <label className="block text-xs font-black uppercase tracking-wider text-slate-200 mb-2">
+                  Número de Factura / Remisión <span className="text-emerald-400">*</span>
                 </label>
                 <div className="relative">
-                  <FileCheck className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
+                  <FileCheck className="w-4 h-4 text-emerald-400 absolute left-3.5 top-3.5" />
                   <input
                     type="text"
                     required
                     value={noFactura}
                     onChange={(e) => setNoFactura(e.target.value.toUpperCase())}
                     placeholder="Ej. FAC-0001, REM-9921"
-                    className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-sm font-mono uppercase text-white focus:outline-none focus:border-amber-400"
+                    className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-sm font-mono uppercase text-white focus:outline-none focus:border-emerald-400 font-bold"
                   />
                 </div>
-                <span className="text-[10px] text-slate-500">Documento fiscal de soporte obligatorio.</span>
+                <span className="text-[10px] text-slate-400">Documento fiscal de compra obligatorio.</span>
               </div>
             </div>
 
             {/* Operador de almacén automático */}
-            <div className="p-3 bg-slate-950/40 border border-slate-800 rounded-lg text-xs text-slate-400 flex items-center justify-between">
+            <div className="p-3 bg-slate-950/60 border border-slate-800 rounded-xl text-xs text-slate-400 flex items-center justify-between">
               <span>Almacenista responsable de recepción:</span>
-              <strong className="text-white font-semibold">{user.nombre} ({user.email})</strong>
+              <strong className="text-white font-bold">{user.nombre} ({user.email})</strong>
             </div>
 
             {/* Botón de envío */}
@@ -311,7 +300,7 @@ function EntradasContent() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="flex items-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-sm font-bold rounded-xl shadow-lg shadow-emerald-500/20 transition-all disabled:opacity-50"
+                className="flex items-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-sm font-black rounded-xl shadow-lg shadow-emerald-500/30 transition-all hover:scale-[1.02] disabled:opacity-50"
               >
                 <ArrowDownToLine className="w-4 h-4" />
                 <span>{submitting ? 'Registrando Entrada...' : 'Confirmar Entrada de Material'}</span>
@@ -320,18 +309,6 @@ function EntradasContent() {
 
           </form>
         </div>
-
-        {/* Modal de Escáner de Código de Barras y QR */}
-        <BarcodeScannerModal
-          isOpen={isScannerOpen}
-          onClose={() => setIsScannerOpen(false)}
-          productos={productos}
-          onProductScanned={(prod) => {
-            setSelectedProductoId(prod.id);
-            showSuccess(`Material seleccionado: ${prod.codigo_sku} - ${prod.nombre}`, 'Escaneo Exitoso');
-          }}
-          title="Escanear Material para Entrada"
-        />
 
       </div>
     </AppShell>

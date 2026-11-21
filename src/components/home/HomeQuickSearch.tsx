@@ -1,27 +1,19 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import Link from 'next/link';
 import {
   Search,
-  Scan,
-  Barcode,
   History,
   MapPin,
   Tag,
-  ArrowRight,
   Boxes,
-  ArrowDownToLine,
-  ArrowUpFromLine,
-  ShieldCheck,
+  CheckCircle2,
   AlertTriangle,
-  RotateCw,
+  AlertOctagon,
 } from 'lucide-react';
 import { Producto } from '@/types';
-import { BarcodeScannerModal } from '@/components/scanner/BarcodeScannerModal';
 import { ProductKardexModal } from '@/components/inventory/ProductKardexModal';
 import { ProductLabelModal } from '@/components/inventory/ProductLabelModal';
-import { useToast } from '@/components/ui/ToastContext';
 
 interface HomeQuickSearchProps {
   productos: Producto[];
@@ -29,11 +21,8 @@ interface HomeQuickSearchProps {
 
 export function HomeQuickSearch({ productos }: HomeQuickSearchProps) {
   const [query, setQuery] = useState('');
-  const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [selectedProdForKardex, setSelectedProdForKardex] = useState<Producto | null>(null);
   const [selectedProdForLabel, setSelectedProdForLabel] = useState<Producto | null>(null);
-
-  const { showSuccess } = useToast();
 
   const results = useMemo(() => {
     if (!query.trim()) return [];
@@ -46,30 +35,25 @@ export function HomeQuickSearch({ productos }: HomeQuickSearchProps) {
           p.ubicacion_anaquel.toLowerCase().includes(q) ||
           p.categoria.toLowerCase().includes(q)
       )
-      .slice(0, 6);
+      .slice(0, 8);
   }, [productos, query]);
 
   return (
-    <div className="bg-slate-900/90 border border-violet-500/30 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+    <div className="bg-slate-950/90 border-2 border-violet-500/50 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b-2 border-violet-500/30 pb-3">
         <div>
-          <h3 className="text-base font-black text-white uppercase tracking-wider flex items-center gap-2">
-            <Search className="w-4 h-4 text-cyan-400" />
+          <h3 className="text-base sm:text-lg font-black text-white uppercase tracking-wider flex items-center gap-2">
+            <Search className="w-5 h-5 text-cyan-400" />
             <span>Localizador Rápido de Material y Anaqueles</span>
           </h3>
-          <p className="text-xs text-slate-300 font-medium mt-0.5">
-            Escribe el SKU o escanea con pistola/cámara para consultar stock, ubicación y Kardex
+          <p className="text-xs text-violet-200 font-bold mt-0.5">
+            Escribe el SKU o nombre del material para consultar piezas en stock, capacidad máxima y ubicación física
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setIsScannerOpen(true)}
-          className="self-start sm:self-auto px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-cyan-500/25 flex items-center gap-2 transition"
-        >
-          <Scan className="w-4 h-4 text-slate-950" />
-          <span>Escanear Código / QR</span>
-        </button>
+        <span className="text-xs font-mono font-black text-amber-300 bg-amber-950/80 px-3 py-1 rounded-full border border-amber-400 self-start sm:self-auto shadow-sm">
+          {productos.length} Materiales Catalogados
+        </span>
       </div>
 
       {/* Input de búsqueda */}
@@ -78,14 +62,14 @@ export function HomeQuickSearch({ productos }: HomeQuickSearchProps) {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Escribe SKU (ej. 1138610), nombre de material (Harina, Dona, Tarima) o ubicación..."
-          className="w-full pl-10 pr-4 py-3 bg-slate-950/80 border border-slate-700 focus:border-cyan-400 rounded-2xl text-sm font-medium text-white placeholder-slate-400 outline-none transition shadow-inner"
+          placeholder="Buscar por SKU (ej. 1138610), material (Harina, Tapa, Caja) o ubicación física..."
+          className="w-full pl-11 pr-24 py-3.5 bg-slate-900 border-2 border-violet-400/60 focus:border-cyan-400 rounded-2xl text-sm font-bold text-white placeholder-violet-300/50 outline-none transition shadow-inner"
         />
-        <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+        <Search className="w-5 h-5 text-cyan-400 absolute left-3.5 top-4" />
         {query && (
           <button
             onClick={() => setQuery('')}
-            className="absolute right-3 top-3 text-xs text-slate-400 hover:text-white font-bold bg-slate-800 px-2 py-0.5 rounded-lg"
+            className="absolute right-3 top-3 text-xs text-slate-950 hover:text-black font-black bg-cyan-400 hover:bg-cyan-300 px-3 py-1 rounded-lg transition"
           >
             Limpiar
           </button>
@@ -94,124 +78,118 @@ export function HomeQuickSearch({ productos }: HomeQuickSearchProps) {
 
       {/* Resultados de Búsqueda Rápida */}
       {results.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
           {results.map((p) => {
             const esCritico = p.stock_actual <= p.stock_min;
             const esSobrestock = p.stock_max > 0 && p.stock_actual >= p.stock_max;
+            const unidad = p.unidad_medida || 'pzas';
+            const pct = p.stock_max > 0 ? Math.min(100, Math.round((p.stock_actual / p.stock_max) * 100)) : 0;
 
             return (
               <div
                 key={p.id}
-                className="p-3.5 bg-slate-950/70 border border-slate-800 rounded-2xl hover:border-violet-500/50 transition flex flex-col justify-between shadow-md"
+                className="p-4 bg-slate-900/95 border-2 border-violet-500/40 hover:border-cyan-400 rounded-2xl transition-all flex flex-col justify-between shadow-xl"
               >
                 <div>
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <span className="font-mono text-xs font-black text-amber-300 bg-amber-950/90 px-2 py-0.5 rounded border border-amber-600/40">
-                      {p.codigo_sku}
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <span className="font-mono text-xs font-black text-amber-300 bg-amber-950 px-2.5 py-0.5 rounded-md border border-amber-400">
+                      SKU: {p.codigo_sku}
                     </span>
                     <span
-                      className={`text-[10px] font-mono font-black uppercase px-2 py-0.5 rounded ${
+                      className={`text-[11px] font-mono font-black uppercase px-2.5 py-0.5 rounded-md border ${
                         esCritico
-                          ? 'bg-rose-950 text-rose-300 border border-rose-600'
+                          ? 'bg-rose-950 text-rose-300 border-rose-500 shadow-rose-950/60'
                           : esSobrestock
-                          ? 'bg-amber-950 text-amber-300 border border-amber-600'
-                          : 'bg-emerald-950 text-emerald-300 border border-emerald-600'
+                          ? 'bg-amber-950 text-amber-300 border-amber-400'
+                          : 'bg-emerald-950 text-emerald-300 border-emerald-400'
                       }`}
                     >
                       {esCritico ? 'Stock Crítico' : esSobrestock ? 'Sobrestock' : 'Saludable'}
                     </span>
                   </div>
 
-                  <h4 className="font-bold text-white text-sm line-clamp-1">{p.nombre}</h4>
-                  <p className="text-[11px] text-slate-400">{p.categoria}</p>
+                  <h4 className="font-black text-white text-base line-clamp-1">{p.nombre}</h4>
+                  <p className="text-xs font-semibold text-violet-300">{p.categoria}</p>
                 </div>
 
-                <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between">
-                  <div className="flex items-center gap-3 text-xs">
-                    <div>
-                      <span className="text-[10px] text-slate-400 block font-bold">STOCK:</span>
-                      <span className="font-mono font-black text-white text-sm">
+                {/* Bloque de Existencias y Capacidad Máxima */}
+                <div className="mt-3 pt-3 border-t-2 border-slate-800 space-y-2">
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="p-2 bg-slate-950 rounded-xl border border-slate-800">
+                      <span className="text-[10px] text-cyan-300 block font-black uppercase tracking-wider">PIEZAS ACTUALES:</span>
+                      <span className="font-mono font-black text-white text-base">
                         {p.stock_actual}{' '}
-                        <span className="text-[10px] font-normal text-slate-400">{p.unidad_medida}</span>
+                        <span className="text-xs font-sans text-cyan-300 font-bold">{unidad}</span>
                       </span>
                     </div>
 
-                    <div>
-                      <span className="text-[10px] text-slate-400 block font-bold">UBICACIÓN:</span>
-                      <span className="font-mono font-black text-cyan-300 text-xs flex items-center gap-0.5">
-                        <MapPin className="w-3 h-3 text-cyan-400" />
-                        {p.ubicacion_anaquel || 'S/U'}
+                    <div className="p-2 bg-slate-950 rounded-xl border border-slate-800">
+                      <span className="text-[10px] text-amber-400 block font-black uppercase tracking-wider">CAPACIDAD MÁXIMA:</span>
+                      <span className="font-mono font-black text-amber-300 text-base">
+                        {p.stock_max > 0 ? `${p.stock_max} ${unidad}` : 'Sin límite'}
                       </span>
                     </div>
                   </div>
 
-                  {/* Acciones Rápidas */}
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedProdForKardex(p)}
-                      title="Ver Kardex y Trazabilidad"
-                      className="p-1.5 bg-indigo-950 hover:bg-indigo-900 border border-indigo-700/60 text-indigo-300 rounded-lg text-xs font-bold transition flex items-center gap-1"
-                    >
-                      <History className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">Kardex</span>
-                    </button>
+                  {/* Barra de progreso de capacidad */}
+                  {p.stock_max > 0 && (
+                    <div>
+                      <div className="flex justify-between text-[10px] font-mono font-bold text-slate-300 mb-0.5">
+                        <span>Ocupación de Anaquel ({pct}%)</span>
+                        <span className="text-slate-400">Máx: {p.stock_max} {unidad}</span>
+                      </div>
+                      <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-700">
+                        <div
+                          className={`h-full rounded-full transition-all duration-300 ${
+                            esCritico ? 'bg-rose-500' : esSobrestock ? 'bg-amber-400' : 'bg-emerald-400'
+                          }`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
 
-                    <button
-                      type="button"
-                      onClick={() => setSelectedProdForLabel(p)}
-                      title="Imprimir Etiqueta con Código de Barras"
-                      className="p-1.5 bg-amber-950 hover:bg-amber-900 border border-amber-700/60 text-amber-300 rounded-lg text-xs font-bold transition flex items-center gap-1"
-                    >
-                      <Tag className="w-3.5 h-3.5" />
-                    </button>
+                  <div className="flex items-center justify-between pt-1">
+                    <div className="flex items-center gap-1 text-xs font-mono font-black text-slate-300">
+                      <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <span>{p.ubicacion_anaquel || 'S/U'}</span>
+                    </div>
 
-                    <Link
-                      href={`/salidas?sku=${p.codigo_sku}`}
-                      title="Despachar Material"
-                      className="p-1.5 bg-emerald-950 hover:bg-emerald-900 border border-emerald-700/60 text-emerald-300 rounded-lg text-xs font-bold transition"
-                    >
-                      <ArrowUpFromLine className="w-3.5 h-3.5" />
-                    </Link>
+                    {/* Acciones Rápidas */}
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedProdForKardex(p)}
+                        title="Ver Kardex y Trazabilidad"
+                        className="px-2.5 py-1 bg-indigo-950 hover:bg-indigo-900 border border-indigo-500 text-indigo-300 hover:text-white rounded-lg text-xs font-black transition flex items-center gap-1 shadow"
+                      >
+                        <History className="w-3.5 h-3.5" />
+                        <span>Kardex</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setSelectedProdForLabel(p)}
+                        title="Imprimir Etiqueta"
+                        className="px-2.5 py-1 bg-amber-950 hover:bg-amber-900 border border-amber-500 text-amber-300 hover:text-white rounded-lg text-xs font-black transition flex items-center gap-1 shadow"
+                      >
+                        <Tag className="w-3.5 h-3.5" />
+                        <span>Etiqueta</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
             );
           })}
         </div>
-      ) : query.trim() ? (
-        <div className="p-6 text-center text-slate-400 text-xs bg-slate-950/40 rounded-2xl border border-slate-800">
-          No se encontraron materiales con ese SKU o nombre.
+      ) : query.trim().length > 0 ? (
+        <div className="p-4 text-center text-xs font-bold text-violet-300 bg-slate-950/60 rounded-2xl border border-violet-500/20">
+          No se encontraron materiales que coincidan con la búsqueda &quot;{query}&quot;.
         </div>
-      ) : (
-        <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-slate-400">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-            Accesos frecuentes:
-          </span>
-          {productos.slice(0, 5).map((p) => (
-            <button
-              key={p.id}
-              onClick={() => setQuery(p.codigo_sku)}
-              className="px-2.5 py-1 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-lg text-xs font-mono text-cyan-300 transition"
-            >
-              {p.codigo_sku}
-            </button>
-          ))}
-        </div>
-      )}
+      ) : null}
 
-      {/* Modales */}
-      <BarcodeScannerModal
-        isOpen={isScannerOpen}
-        onClose={() => setIsScannerOpen(false)}
-        productos={productos}
-        onProductScanned={(prod) => {
-          setQuery(prod.codigo_sku);
-          showSuccess(`Material localizado: ${prod.codigo_sku} - ${prod.nombre}`, 'Escaneo Exitoso');
-        }}
-        title="Localizar Material en Almacén"
-      />
-
+      {/* Modales de Kardex y Etiqueta */}
       <ProductKardexModal
         isOpen={Boolean(selectedProdForKardex)}
         onClose={() => setSelectedProdForKardex(null)}

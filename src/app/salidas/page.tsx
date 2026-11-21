@@ -7,9 +7,7 @@ import { ProductDrillDownSelector } from '@/components/inventory/ProductDrillDow
 import { OperacionesNavTabs } from '@/components/movements/OperacionesNavTabs';
 import {
   ArrowUpFromLine,
-  FileText,
   AlertCircle,
-  Printer,
   MapPin,
   RotateCw,
   Building2,
@@ -17,9 +15,8 @@ import {
   Wrench,
 } from 'lucide-react';
 import { Producto, UsuarioAutenticado, TicketSalida } from '@/types';
-import { BarcodeScannerModal } from '@/components/scanner/BarcodeScannerModal';
 import { useToast } from '@/components/ui/ToastContext';
-import { Scan } from 'lucide-react';
+import { notifyStockUpdated } from '@/lib/events';
 
 const AREAS_PLANTA = [
   'Producción Línea 1',
@@ -33,7 +30,6 @@ export default function SalidasPage() {
   const [user, setUser] = useState<UsuarioAutenticado | null>(null);
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loadingProds, setLoadingProds] = useState(true);
-  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   const { showSuccess, showError } = useToast();
 
@@ -54,7 +50,6 @@ export default function SalidasPage() {
       .then((data) => {
         if (data.authenticated) {
           setUser(data.user);
-          // Si es Jefe de Área, preseleccionar su área y nombre
           if (data.user.rol === 'JEFE_AREA') {
             setAreaSolicitante(data.user.area || 'Producción Línea 1');
             setResponsableRecibe(data.user.nombre || '');
@@ -100,7 +95,6 @@ export default function SalidasPage() {
         throw new Error('Indique la Orden de Trabajo (OT) o motivo del consumo.');
       }
 
-      // Validación preventiva en cliente contra stock negativo
       if (selectedProd && Number(cantidad) > selectedProd.stock_actual) {
         throw new Error('No es posible realizar la salida. La cantidad solicitada supera el inventario disponible.');
       }
@@ -123,11 +117,14 @@ export default function SalidasPage() {
         throw new Error(data.error || 'Error al procesar la salida por vale.');
       }
 
+      // Notificar a toda la aplicación en tiempo real (Dashboard, Home, Inventario)
+      notifyStockUpdated();
+
       // Si se generó el ticket, mostrar modal de impresión inmediatamente
       if (data.ticket) {
         setGeneratedTicket(data.ticket);
         showSuccess(
-          `Vale ${data.ticket.folio_vale} generado (-${cantidad} ${selectedProd?.unidad_medida || 'uds'})`,
+          `Vale ${data.ticket.folio_vale} generado (-${cantidad} ${selectedProd?.unidad_medida || 'piezas'})`,
           'Salida por Vale Exitosa'
         );
       }
@@ -148,7 +145,7 @@ export default function SalidasPage() {
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">
-        <RotateCw className="w-6 h-6 animate-spin text-amber-400" />
+        <RotateCw className="w-6 h-6 animate-spin text-cyan-400" />
       </div>
     );
   }
@@ -160,43 +157,29 @@ export default function SalidasPage() {
         <OperacionesNavTabs userRole={user.rol} />
 
         {/* Cabecera */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-black tracking-tight text-white uppercase flex items-center gap-2">
-              <ArrowUpFromLine className="w-7 h-7 text-amber-400" />
-              <span>Salida de Almacén mediante Vale</span>
-            </h1>
-            <p className="text-xs text-slate-400 mt-1">
-              Despacho de insumos por orden de trabajo, validación estricta de existencias y comprobante impreso
-            </p>
-          </div>
+        <div className="bg-gradient-to-r from-cyan-950 via-slate-900 to-cyan-950 border-2 border-cyan-500/50 border-t-4 border-t-cyan-400 p-5 rounded-3xl shadow-xl shadow-cyan-950/30">
+          <h1 className="text-2xl font-black tracking-tight text-white uppercase flex items-center gap-2">
+            <ArrowUpFromLine className="w-7 h-7 text-cyan-400" />
+            <span>Despacho de Material por Vale (Salidas)</span>
+          </h1>
+          <p className="text-xs text-cyan-200 mt-1 font-medium">
+            Surtido a líneas de producción y mantenimiento por Orden de Trabajo (OT) con generación de comprobante y sincronización en tiempo real
+          </p>
         </div>
 
-        {/* Error / Advertencia */}
+        {/* Error */}
         {error && (
-          <div className="p-4 bg-red-950/80 border border-red-800 rounded-xl flex items-center gap-3 text-red-300 text-xs font-semibold animate-shake">
+          <div className="p-4 bg-red-950/90 border-2 border-red-500 rounded-2xl flex items-center gap-3 text-red-200 text-xs font-bold">
             <AlertCircle className="w-5 h-5 flex-shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {/* Formulario de Salida */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 md:p-8 shadow-xl">
-          {/* Botón Escáner Barcode / QR */}
-          <div className="mb-4 flex justify-end">
-            <button
-              type="button"
-              onClick={() => setIsScannerOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-cyan-500/25 transition transform hover:scale-[1.02]"
-            >
-              <Scan className="w-4 h-4 text-slate-950" />
-              <span>Escanear Código / QR</span>
-            </button>
-          </div>
-
+        <div className="bg-slate-900 border-2 border-cyan-500/40 rounded-3xl p-6 md:p-8 shadow-2xl">
           <form onSubmit={handleSubmit} className="space-y-6">
             
-            {/* 1. Selector de Producto en Drill-Down con Módulo de Alta */}
+            {/* 1. Selector de Producto en Drill-Down */}
             <ProductDrillDownSelector
               productos={productos}
               selectedProductoId={selectedProductoId}
@@ -212,35 +195,37 @@ export default function SalidasPage() {
               label="Material / Insumo Solicitado para Despacho"
             />
 
-            {/* Ficha técnica y advertencia de stock del material seleccionado */}
+            {/* Ficha técnica y existencias exactas en piezas vs capacidad máxima */}
             {selectedProd && (
-              <div className={`p-4 rounded-xl border grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs ${
+              <div className={`p-4 rounded-2xl border-2 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs ${
                 selectedProd.stock_actual <= selectedProd.stock_min
-                  ? 'bg-red-950/40 border-red-800'
-                  : 'bg-slate-950/60 border-slate-800'
+                  ? 'bg-red-950/50 border-red-500/60'
+                  : 'bg-slate-950/80 border-cyan-500/30'
               }`}>
                 <div>
-                  <span className="text-slate-500 block">Stock Disponible:</span>
-                  <strong className={`font-mono text-base font-bold ${
-                    selectedProd.stock_actual <= selectedProd.stock_min ? 'text-red-400' : 'text-emerald-400'
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Piezas Disponibles:</span>
+                  <strong className={`font-mono text-base font-black ${
+                    selectedProd.stock_actual <= selectedProd.stock_min ? 'text-rose-400' : 'text-emerald-400'
                   }`}>
                     {selectedProd.stock_actual} {selectedProd.unidad_medida}
                   </strong>
                 </div>
                 <div>
-                  <span className="text-slate-500 block">Ubicación de Retiro:</span>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Capacidad Máxima:</span>
+                  <strong className="text-amber-300 font-mono text-sm font-black">
+                    {selectedProd.stock_max} {selectedProd.unidad_medida}
+                  </strong>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Ubicación de Retiro:</span>
                   <strong className="text-white font-mono flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-amber-400" />
+                    <MapPin className="w-3.5 h-3.5 text-cyan-400" />
                     {selectedProd.ubicacion_anaquel}
                   </strong>
                 </div>
                 <div>
-                  <span className="text-slate-500 block">Nivel de Seguridad:</span>
-                  <span className="text-slate-300 font-semibold">Min: {selectedProd.stock_min} {selectedProd.unidad_medida}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block">Categoría:</span>
-                  <span className="text-slate-300 font-semibold">{selectedProd.categoria}</span>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Categoría:</span>
+                  <span className="text-slate-200 font-bold">{selectedProd.categoria}</span>
                 </div>
               </div>
             )}
@@ -248,8 +233,8 @@ export default function SalidasPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {/* 2. Cantidad */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
-                  Cantidad a Despachar <span className="text-amber-400">*</span>
+                <label className="block text-xs font-black uppercase tracking-wider text-slate-200 mb-2">
+                  Cantidad a Despachar (Piezas / Unidades) <span className="text-cyan-400">*</span>
                 </label>
                 <div className="relative">
                   <input
@@ -259,37 +244,35 @@ export default function SalidasPage() {
                     required
                     value={cantidad}
                     onChange={(e) => setCantidad(e.target.value)}
-                    placeholder="Ej. 20"
-                    className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-base font-bold text-white focus:outline-none focus:border-amber-400"
+                    placeholder="Ej. 10"
+                    className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-base font-black text-white focus:outline-none focus:border-cyan-400 font-mono"
                   />
                   {selectedProd && (
-                    <span className="absolute right-4 top-3.5 text-xs font-semibold text-slate-400">
+                    <span className="absolute right-4 top-3.5 text-xs font-bold text-slate-400">
                       {selectedProd.unidad_medida}
                     </span>
                   )}
                 </div>
-                {selectedProd && cantidad && (
-                  <p className={`text-[11px] font-mono mt-1.5 ${
-                    Number(cantidad) > selectedProd.stock_actual ? 'text-red-400 font-bold' : 'text-slate-400'
-                  }`}>
-                    {Number(cantidad) > selectedProd.stock_actual
-                      ? `⚠️ Supera el inventario disponible (${selectedProd.stock_actual} ${selectedProd.unidad_medida})`
-                      : `&rarr; Quedarán ${selectedProd.stock_actual - Number(cantidad)} ${selectedProd.unidad_medida} en anaquel`}
+                {selectedProd && cantidad && Number(cantidad) > 0 && (
+                  <p className="text-[11px] font-mono font-bold mt-1.5 text-amber-400">
+                    &rarr; El stock disminuirá a{' '}
+                    <strong>{selectedProd.stock_actual - Number(cantidad)} {selectedProd.unidad_medida}</strong>
                   </p>
                 )}
               </div>
 
               {/* 3. Área Solicitante */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
-                  Área Solicitante de Planta <span className="text-amber-400">*</span>
+                <label className="block text-xs font-black uppercase tracking-wider text-slate-200 mb-2">
+                  Área Solicitante de Planta <span className="text-cyan-400">*</span>
                 </label>
                 <div className="relative">
-                  <Building2 className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
+                  <Building2 className="w-4 h-4 text-cyan-400 absolute left-3.5 top-3.5" />
                   <select
                     value={areaSolicitante}
                     onChange={(e) => setAreaSolicitante(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-amber-400"
+                    disabled={user.rol === 'JEFE_AREA'}
+                    className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-cyan-400 font-bold disabled:opacity-75"
                   >
                     {AREAS_PLANTA.map((area) => (
                       <option key={area} value={area}>
@@ -304,46 +287,46 @@ export default function SalidasPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {/* 4. Responsable que Recibe */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
-                  Responsable que Recibe en Planta <span className="text-amber-400">*</span>
+                <label className="block text-xs font-black uppercase tracking-wider text-slate-200 mb-2">
+                  Responsable que Recibe en Planta <span className="text-cyan-400">*</span>
                 </label>
                 <div className="relative">
-                  <UserCheck className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
+                  <UserCheck className="w-4 h-4 text-cyan-400 absolute left-3.5 top-3.5" />
                   <input
                     type="text"
                     required
                     value={responsableRecibe}
                     onChange={(e) => setResponsableRecibe(e.target.value)}
                     placeholder="Ej. Juan Pérez (Supervisor)"
-                    className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-amber-400"
+                    className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-cyan-400 font-bold"
                   />
                 </div>
               </div>
 
               {/* 5. Motivo / Orden de Trabajo (OT) */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
-                  Motivo / Orden de Trabajo (OT) <span className="text-amber-400">*</span>
+                <label className="block text-xs font-black uppercase tracking-wider text-slate-200 mb-2">
+                  Motivo / Orden de Trabajo (OT) <span className="text-cyan-400">*</span>
                 </label>
                 <div className="relative">
-                  <Wrench className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
+                  <Wrench className="w-4 h-4 text-cyan-400 absolute left-3.5 top-3.5" />
                   <input
                     type="text"
                     required
                     value={motivoOT}
                     onChange={(e) => setMotivoOT(e.target.value.toUpperCase())}
-                    placeholder="Ej. OT-1025, Mantenimiento Preventivo Prensa 3"
-                    className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-sm font-mono text-white focus:outline-none focus:border-amber-400 uppercase"
+                    placeholder="Ej. OT-1025, Mantenimiento Preventivo"
+                    className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-sm font-mono text-white focus:outline-none focus:border-cyan-400 uppercase font-bold"
                   />
                 </div>
-                <span className="text-[10px] text-slate-500">Clave requerida para trazabilidad de costos.</span>
+                <span className="text-[10px] text-slate-400">Clave requerida para trazabilidad de consumos.</span>
               </div>
             </div>
 
             {/* Operador responsable */}
-            <div className="p-3 bg-slate-950/40 border border-slate-800 rounded-lg text-xs text-slate-400 flex items-center justify-between">
+            <div className="p-3 bg-slate-950/60 border border-slate-800 rounded-xl text-xs text-slate-400 flex items-center justify-between">
               <span>Almacenista que entrega el material:</span>
-              <strong className="text-white font-semibold">{user.nombre} ({user.rol})</strong>
+              <strong className="text-white font-bold">{user.nombre} ({user.rol})</strong>
             </div>
 
             {/* Botón de emisión */}
@@ -351,7 +334,7 @@ export default function SalidasPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="flex items-center gap-2 px-6 py-3 bg-amber-400 hover:bg-amber-300 text-slate-950 text-sm font-bold rounded-xl shadow-lg shadow-amber-400/20 transition-all disabled:opacity-50"
+                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 text-sm font-black rounded-xl shadow-lg shadow-cyan-500/30 transition-all hover:scale-[1.02] disabled:opacity-50"
               >
                 <ArrowUpFromLine className="w-4 h-4" />
                 <span>{submitting ? 'Procesando Vale...' : 'Emitir Vale y Generar Ticket'}</span>
@@ -365,18 +348,6 @@ export default function SalidasPage() {
         <TicketModal
           ticket={generatedTicket}
           onClose={() => setGeneratedTicket(null)}
-        />
-
-        {/* Modal de Escáner de Código de Barras y QR */}
-        <BarcodeScannerModal
-          isOpen={isScannerOpen}
-          onClose={() => setIsScannerOpen(false)}
-          productos={productos}
-          onProductScanned={(prod) => {
-            setSelectedProductoId(prod.id);
-            showSuccess(`Material seleccionado para despacho: ${prod.codigo_sku} - ${prod.nombre}`, 'Escaneo Exitoso');
-          }}
-          title="Escanear Material para Salida"
         />
 
       </div>
