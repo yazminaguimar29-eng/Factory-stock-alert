@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { StockBadge } from '@/components/inventory/StockBadge';
 import { ProductModal } from '@/components/inventory/ProductModal';
-import { InventarioNavTabs } from '@/components/inventory/InventarioNavTabs';
 import {
   Boxes,
   Plus,
@@ -278,9 +277,6 @@ export default function InventarioPage() {
   return (
     <AppShell user={user}>
       <div className="space-y-6">
-        {/* Menú Unificado: Inventario y Ajustes */}
-        <InventarioNavTabs userRole={user.rol} />
-
         {/* Cabecera y botón Crear SKU */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>

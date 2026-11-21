@@ -66,25 +66,11 @@ export function Sidebar({ rol, isOpen, onClose, isCollapsed = false, onToggleCol
       roles: ['ADMIN', 'ALMACENISTA', 'JEFE_AREA'],
     },
     {
-      name: 'Inventario y Ajustes',
+      name: 'Inventario',
       href: '/inventario',
-      matchPaths: ['/inventario', '/ajustes'],
+      matchPaths: ['/inventario'],
       icon: Boxes,
       roles: ['ADMIN', 'ALMACENISTA', 'JEFE_AREA'],
-      subItems: [
-        {
-          name: 'Catálogo Inventario',
-          href: '/inventario',
-          icon: Boxes,
-          roles: ['ADMIN', 'ALMACENISTA', 'JEFE_AREA'],
-        },
-        {
-          name: 'Ajustes Auditoría',
-          href: '/ajustes',
-          icon: SlidersHorizontal,
-          roles: ['ADMIN', 'ALMACENISTA'],
-        },
-      ],
     },
     {
       name: 'Entradas, Salidas y Dev.',
