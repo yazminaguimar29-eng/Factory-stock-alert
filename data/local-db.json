@@ -465,6 +465,15 @@
       "rol": "JEFE_AREA",
       "area": "Mantenimiento",
       "activo": "SI"
+    },
+    {
+      "id": "usr-5",
+      "nombre": "Prueba",
+      "email": "prueba@factorystock.com",
+      "password_hash": "$2a$10$GxWMhJkTPHB9ztSCjukDfu4CBhhJVRDQ7Yu7FIMjSPxewjukQP81a",
+      "rol": "ADMIN",
+      "area": "Prueba",
+      "activo": "SI"
     }
   ],
   "alertas": [

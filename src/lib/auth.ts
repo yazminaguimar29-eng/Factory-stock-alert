@@ -79,11 +79,11 @@ export async function setSessionCookie(token: string) {
 }
 
 export const DEFAULT_DEMO_USER: UsuarioAutenticado = {
-  id: 'usr-1',
-  nombre: 'Ing. Carlos Mendoza (Gerente)',
-  email: 'admin@factorystock.com',
+  id: 'usr-5',
+  nombre: 'Prueba',
+  email: 'prueba@factorystock.com',
   rol: 'ADMIN',
-  area: 'Gerencia de Planta',
+  area: 'Prueba',
 };
 
 /**

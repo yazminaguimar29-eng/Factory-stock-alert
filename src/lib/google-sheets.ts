@@ -805,14 +805,22 @@ export async function fetchUsuariosFromSheet(): Promise<Usuario[]> {
         }
       }
 
+      const rawRol = (row[4] || '').toUpperCase().trim();
+      const validRol: Usuario['rol'] =
+        rawRol === 'ALMACENISTA'
+          ? 'ALMACENISTA'
+          : rawRol === 'JEFE_AREA'
+          ? 'JEFE_AREA'
+          : 'ADMIN';
+
       usuarios.push({
-        id: row[0] || '',
-        nombre: row[1] || '',
+        id: row[0] || `usr-${i + 1}`,
+        nombre: row[1] || 'Usuario',
         email: (row[2] || '').toLowerCase().trim(),
         password_hash: passHash,
-        rol: (row[4] as Usuario['rol']) || 'JEFE_AREA',
-        area: row[5] || '',
-        activo: (row[6] === 'NO' ? 'NO' : 'SI') as 'SI' | 'NO',
+        rol: validRol,
+        area: row[5] || 'General',
+        activo: ((row[6] || 'SI').toUpperCase().trim() === 'NO' ? 'NO' : 'SI') as 'SI' | 'NO',
       });
     }
 

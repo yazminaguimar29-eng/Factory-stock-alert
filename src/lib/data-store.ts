@@ -77,6 +77,15 @@ export const INITIAL_USUARIOS: Usuario[] = [
     area: 'Mantenimiento',
     activo: 'SI',
   },
+  {
+    id: 'usr-5',
+    nombre: 'Prueba',
+    email: 'prueba@factorystock.com',
+    password_hash: '$2a$10$GxWMhJkTPHB9ztSCjukDfu4CBhhJVRDQ7Yu7FIMjSPxewjukQP81a',
+    rol: 'ADMIN',
+    area: 'Prueba',
+    activo: 'SI',
+  },
 ];
 
 export const INITIAL_PRODUCTOS: Producto[] = [
@@ -1067,7 +1076,7 @@ class DataStore {
   public async getUsuarioByEmail(email: string): Promise<Usuario | null> {
     const usuarios = await this.getUsuarios();
     const clean = email.toLowerCase().trim();
-    return usuarios.find((u) => u.email.toLowerCase().trim() === clean && u.activo === 'SI') || null;
+    return usuarios.find((u) => u.email.toLowerCase().trim() === clean && (u.activo || 'SI').toUpperCase().trim() === 'SI') || null;
   }
 
   public async createUsuario(u: {
